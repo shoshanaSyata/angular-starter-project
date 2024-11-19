@@ -425,42 +425,47 @@ export class GridSettings<rowType = unknown> {
     }
     this.unsubscribe()
     let resolved = false
-    return new Promise<rowType[]>((res) => {
-      this.unsubscribe = this.restList.get(opt, (rows) => {
-        this.selectedRows = this.selectedRows.map((s) => {
-          let id = getEntityRef(s).getId()
-          let r = rows.find((r) => getEntityRef(r).getId() == id)
-          if (r !== undefined) return r
-          return s
+
+    if (this.settings && !(this.settings.knowTotalRows === false)) {
+      this.refreshCount = () =>
+        this.restList.count(opt.where).then((x) => {
+          this.totalRows = x
         })
-        let currentRow =
-          this.currentRow &&
-          this.restList.items.find(
-            (y) =>
-              this.repository.getEntityRef(y).getId() ===
-              this.repository.getEntityRef(this.currentRow).getId()
-          )
-        if (this.restList.items.length == 0) {
-          this.setCurrentRow(undefined!)
-        } else {
-          this.setCurrentRow(currentRow || this.restList.items[0])
-        }
-        if (this.settings?.rowsLoaded) {
-          this.settings?.rowsLoaded(this.restList.items)
-        }
-        if (!resolved) {
-          resolved = true
-          res(this.restList.items)
-        }
-        return this.restList
-      })
-      if (this.settings && !(this.settings.knowTotalRows === false)) {
-        this.refreshCount = () =>
-          this.restList.count(opt.where).then((x) => {
-            this.totalRows = x
+    }
+
+    return new Promise<rowType[]>((res) => {
+      this.unsubscribe = this.restList.get(
+        opt,
+        (rows) => {
+          this.selectedRows = this.selectedRows.map((s) => {
+            let id = getEntityRef(s).getId()
+            let r = rows.find((r) => getEntityRef(r).getId() == id)
+            if (r !== undefined) return r
+            return s
           })
-        this.refreshCount()
-      }
+          let currentRow =
+            this.currentRow &&
+            this.restList.items.find(
+              (y) =>
+                this.repository.getEntityRef(y).getId() ===
+                this.repository.getEntityRef(this.currentRow).getId()
+            )
+          if (this.restList.items.length == 0) {
+            this.setCurrentRow(undefined!)
+          } else {
+            this.setCurrentRow(currentRow || this.restList.items[0])
+          }
+          if (this.settings?.rowsLoaded) {
+            this.settings?.rowsLoaded(this.restList.items)
+          }
+          if (!resolved) {
+            resolved = true
+            res(this.restList.items)
+          }
+          return this.restList
+        },
+        this.refreshCount
+      )
     })
   }
   refreshCount = () => {}

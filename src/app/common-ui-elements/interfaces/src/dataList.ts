@@ -19,18 +19,31 @@ export class DataList<T> implements Iterable<T> {
   count(where?: EntityFilter<T>) {
     return this.repository.count(where)
   }
-  get(options: FindOptions<T>, andDo: (rows: T[]) => void) {
+  get(
+    options: FindOptions<T>,
+    andDo: (rows: T[]) => void,
+    andCount?: () => void
+  ) {
     let unSub = () => {}
     if (this.liveQuery) {
       unSub = this.repository.liveQuery(options).subscribe((args) => {
         this.items = args.items // args.applyChanges(this.items)
         andDo(this.items)
+
+        if (
+          andCount &&
+          args.changes.filter((change) => change.type != 'replace').length
+        ) {
+          andCount()
+        }
+
         return this.items
       })
     } else {
       this.repository.find(options).then((items) => {
         this.items = items
         andDo(this.items)
+        if(andCount) andCount()
       })
     }
     const unSub2 = this.repository.addEventListener({
